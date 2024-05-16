@@ -754,10 +754,10 @@ public:
   struct flatten_result_t
   {
     // leaf node's level
-    int leaf_level;
+    size_type leaf_level;
 
     // root node index; must be 0
-    int root;
+    size_type root;
 
     // node data ( include leaf nodes )
     std::vector<flatten_node_t> nodes;

@@ -317,10 +317,10 @@ The return type of `RTree::flatten()` is `flatten_result_t`, which contains all 
 struct flatten_result_t
 {
   // leaf node's level
-  int leaf_level;
+  size_type leaf_level;
 
   // root node index; must be 0
-  int root;
+  size_type root;
 
   // node information ( include leaf nodes )
   std::vector<flatten_node_t> nodes;
@@ -359,6 +359,7 @@ struct flatten_node_t
 
   // for leaf node ( level == leaf_level ),
   // children[ offset + i ] is the index on array 'data'
+  // which is, the real data you inserted
 
   // for normal node ( level < leaf_level ),
   // children[ offset + i ] is the index on array 'nodes'
