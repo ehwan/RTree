@@ -440,7 +440,7 @@ TEST(RTreeTest, Flatten)
   rtree_type rtree;
 
   // insert 3000 points
-  for (int i = 0; i < 1; ++i)
+  for (int i = 0; i < 3000; ++i)
   {
     rtree.emplace(i, i);
   }
@@ -448,7 +448,7 @@ TEST(RTreeTest, Flatten)
   auto flatten = rtree.flatten();
 
   ASSERT_TRUE(flatten.leaf_level == rtree.leaf_level());
-  ASSERT_TRUE(flatten.data.size() == 1);
+  ASSERT_TRUE(flatten.data.size() == 3000);
 
   std::vector<bool> valid(3000, false);
   for (int data : flatten.data)
@@ -462,7 +462,7 @@ TEST(RTreeTest, Flatten)
   int nodeid = 0;
   for (auto& node : flatten.nodes)
   {
-    if (nodeid != 0)
+    if (nodeid != flatten.root)
     {
       ASSERT_GE(node.size, rtree_type::MIN_ENTRIES);
       ASSERT_LE(node.size, rtree_type::MAX_ENTRIES);

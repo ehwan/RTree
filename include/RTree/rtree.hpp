@@ -742,11 +742,11 @@ public:
 
   struct flatten_node_t
   {
+    // offset in global dense buffer
+    size_type offset;
+
+    // the number of children
     size_type size;
-    // children node index
-    size_type children[MAX_ENTRIES];
-    // bounding box of child node
-    geometry_type children_bound[MAX_ENTRIES];
 
     // parent node index
     size_type parent;
@@ -756,8 +756,16 @@ public:
     // leaf node's level
     int leaf_level;
 
+    // root node index; must be 0
+    int root;
+
     // node data ( include leaf nodes )
     std::vector<flatten_node_t> nodes;
+
+    // global dense buffer of children_boundingbox
+    std::vector<geometry_type> children_bound;
+    // global dense buffer of children index
+    std::vector<size_type> children;
 
     // real data
     std::vector<mapped_type> data;
@@ -772,16 +780,20 @@ protected:
     const size_type this_index = res.nodes.size();
     res.nodes.emplace_back();
     res.nodes[this_index].parent = parent_index;
+    res.nodes[this_index].offset = res.children.size();
     res.nodes[this_index].size = node->size();
 
     for (size_type child_index = 0; child_index < node->size(); ++child_index)
     {
-      res.nodes[this_index].children_bound[child_index]
-          = node->at(child_index).first;
+      res.children.push_back(0);
+      res.children_bound.push_back(node->at(child_index).first);
+    }
 
+    for (size_type child_index = 0; child_index < node->size(); ++child_index)
+    {
       const size_type data_index = res.data.size();
       res.data.emplace_back(std::move(node->at(child_index).second));
-      res.nodes[this_index].children[child_index] = data_index;
+      res.children[res.nodes[this_index].offset + child_index] = data_index;
     }
     return this_index;
   }
@@ -794,16 +806,20 @@ protected:
     const size_type this_index = res.nodes.size();
     res.nodes.emplace_back();
     res.nodes[this_index].parent = parent_index;
+    res.nodes[this_index].offset = res.children.size();
     res.nodes[this_index].size = node->size();
 
     for (size_type child_index = 0; child_index < node->size(); ++child_index)
     {
-      res.nodes[this_index].children_bound[child_index]
-          = node->at(child_index).first;
+      res.children.push_back(0);
+      res.children_bound.push_back(node->at(child_index).first);
+    }
 
+    for (size_type child_index = 0; child_index < node->size(); ++child_index)
+    {
       const size_type data_index = res.data.size();
       res.data.emplace_back(node->at(child_index).second);
-      res.nodes[this_index].children[child_index] = data_index;
+      res.children[res.nodes[this_index].offset + child_index] = data_index;
     }
     return this_index;
   }
@@ -825,16 +841,21 @@ protected:
       const size_type this_index = res.nodes.size();
       res.nodes.emplace_back();
       res.nodes[this_index].parent = parent_index;
+      res.nodes[this_index].offset = res.children.size();
       res.nodes[this_index].size = node->size();
 
       for (size_type child_index = 0; child_index < node->size(); ++child_index)
       {
-        res.nodes[this_index].children_bound[child_index]
-            = node->at(child_index).first;
+        res.children.push_back(0);
+        res.children_bound.push_back(node->at(child_index).first);
+      }
 
-        res.nodes[this_index].children[child_index] = (flatten_recursive<Move>(
-            res, node->at(child_index).second->as_node(), this_index,
-            level + 1));
+      for (size_type child_index = 0; child_index < node->size(); ++child_index)
+      {
+        res.children[res.nodes[this_index].offset + child_index]
+            = flatten_recursive<Move>(res,
+                                      node->at(child_index).second->as_node(),
+                                      this_index, level + 1);
       }
       return this_index;
     }
@@ -846,6 +867,7 @@ public:
   {
     flatten_result_t res;
     res.leaf_level = leaf_level();
+    res.root = 0;
     flatten_recursive<Move>(res, root(), 0, 0);
     return res;
   }
