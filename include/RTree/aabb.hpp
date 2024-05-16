@@ -17,9 +17,6 @@ struct aabb_t
 {
   PointType min_, max_;
 
-  aabb_t()
-  {
-  }
   aabb_t(PointType const& p)
       : min_(p)
       , max_(p)
