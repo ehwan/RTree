@@ -1,7 +1,7 @@
 # RTree
 Header-Only N-dimensional RTree implementation on Modern C++
 
-And some features to use in GPU ( CUDA, OpenCL, etc. )
+And some features to read-only query in GPU ( CUDA, OpenCL, etc. )
 
 ## References
  Guttman, A. (1984). "R-Trees: A Dynamic Index Structure for Spatial Searching" (PDF). Proceedings of the 1984 ACM SIGMOD international conference on Management of data – SIGMOD '84. p. 47.
