@@ -10,6 +10,7 @@ University if California Berkeley
 #include <cassert>
 #include <limits>
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -276,6 +277,11 @@ public:
         insert_node(pair->calculate_bound(), pair, chosen->parent());
       }
     }
+  }
+  template <typename... Args>
+  void emplace(Args&&... args)
+  {
+    insert(value_type(std::forward<Args>(args)...));
   }
 
   void erase(iterator pos)
@@ -732,6 +738,116 @@ public:
   {
     search_overlap_wrapper(root()->as_node(), _leaf_level, search_range,
                            functor);
+  }
+
+  struct flatten_node_t
+  {
+    size_type size;
+    // children node index
+    size_type children[MAX_ENTRIES];
+    // bounding box of child node
+    geometry_type children_bound[MAX_ENTRIES];
+
+    // parent node index
+    size_type parent;
+  };
+  struct flatten_result_t
+  {
+    // leaf node's level
+    int leaf_level;
+
+    // node data ( include leaf nodes )
+    std::vector<flatten_node_t> nodes;
+
+    // real data
+    std::vector<mapped_type> data;
+  };
+
+protected:
+  size_type flatten_recursive_leaf(flatten_result_t& res,
+                                   leaf_type const* node,
+                                   size_type parent_index,
+                                   std::integral_constant<bool, true>) const
+  {
+    const size_type this_index = res.nodes.size();
+    res.nodes.emplace_back();
+    res.nodes[this_index].parent = parent_index;
+    res.nodes[this_index].size = node->size();
+
+    for (size_type child_index = 0; child_index < node->size(); ++child_index)
+    {
+      res.nodes[this_index].children_bound[child_index]
+          = node->at(child_index).first;
+
+      const size_type data_index = res.data.size();
+      res.data.emplace_back(std::move(node->at(child_index).second));
+      res.nodes[this_index].children[child_index] = data_index;
+    }
+    return this_index;
+  }
+
+  size_type flatten_recursive_leaf(flatten_result_t& res,
+                                   leaf_type const* node,
+                                   size_type parent_index,
+                                   std::integral_constant<bool, false>) const
+  {
+    const size_type this_index = res.nodes.size();
+    res.nodes.emplace_back();
+    res.nodes[this_index].parent = parent_index;
+    res.nodes[this_index].size = node->size();
+
+    for (size_type child_index = 0; child_index < node->size(); ++child_index)
+    {
+      res.nodes[this_index].children_bound[child_index]
+          = node->at(child_index).first;
+
+      const size_type data_index = res.data.size();
+      res.data.emplace_back(node->at(child_index).second);
+      res.nodes[this_index].children[child_index] = data_index;
+    }
+    return this_index;
+  }
+
+  template <bool Move = false>
+  size_type flatten_recursive(flatten_result_t& res,
+                              node_type const* node,
+                              size_type parent_index,
+                              int level) const
+  {
+    if (level == leaf_level())
+    {
+      return flatten_recursive_leaf(res, node->as_leaf(), parent_index,
+                                    std::integral_constant<bool, Move> {});
+    }
+    else
+    {
+      // add this node to buffer
+      const size_type this_index = res.nodes.size();
+      res.nodes.emplace_back();
+      res.nodes[this_index].parent = parent_index;
+      res.nodes[this_index].size = node->size();
+
+      for (size_type child_index = 0; child_index < node->size(); ++child_index)
+      {
+        res.nodes[this_index].children_bound[child_index]
+            = node->at(child_index).first;
+
+        res.nodes[this_index].children[child_index] = (flatten_recursive<Move>(
+            res, node->at(child_index).second->as_node(), this_index,
+            level + 1));
+      }
+      return this_index;
+    }
+  }
+
+public:
+  template <bool Move = false>
+  flatten_result_t flatten() const
+  {
+    flatten_result_t res;
+    res.leaf_level = leaf_level();
+    flatten_recursive<Move>(res, root(), 0, 0);
+    return res;
   }
 };
 

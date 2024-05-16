@@ -84,14 +84,13 @@ TEST(RTreeTest, Insert)
     std::vector<bool> valid(i + 1, false);
     for (auto x : rtree)
     {
-      ASSERT_FALSE(valid[x.second]) << "i: " << i << ", "
-                                    << "x: " << x.second << " already exist";
+      ASSERT_FALSE(valid[x.second])
+          << "i: " << i << ", " << "x: " << x.second << " already exist";
       valid[x.second] = true;
     }
     for (int x = 0; x <= i; ++x)
     {
-      ASSERT_TRUE(valid[x]) << "i: " << i << ", "
-                            << "x: " << x << " not exist";
+      ASSERT_TRUE(valid[x]) << "i: " << i << ", " << "x: " << x << " not exist";
     }
   }
 }
@@ -386,14 +385,13 @@ TEST(RTreeTest, MoveOnlyValue)
       for (auto& x : rtree)
       {
         ASSERT_FALSE(valid[x.second.i])
-            << "i: " << i << ", "
-            << "x: " << x.second.i << " already exist";
+            << "i: " << i << ", " << "x: " << x.second.i << " already exist";
         valid[x.second.i] = true;
       }
       for (int x = 0; x <= i; ++x)
       {
-        ASSERT_TRUE(valid[x]) << "i: " << i << ", "
-                              << "x: " << x << " not exist";
+        ASSERT_TRUE(valid[x])
+            << "i: " << i << ", " << "x: " << x << " not exist";
       }
     }
     // destruction check
@@ -402,5 +400,74 @@ TEST(RTreeTest, MoveOnlyValue)
   {
     ASSERT_EQ(destroyed[i], 1)
         << "i: " << i << " destroyed " << destroyed[i] << " times";
+  }
+}
+
+TEST(RTreeTest, StaticVector)
+{
+  eh::rtree::static_vector<int, 1000> sv;
+  std::vector<int> dv;
+
+  std::mt19937 mt(std::random_device {}());
+  std::uniform_int_distribution<int> dist(-100, 100);
+
+  for (int i = 0; i < 1000; ++i)
+  {
+    int x = dist(mt);
+
+    sv.push_back(x);
+    dv.push_back(x);
+    ASSERT_EQ(sv.size(), dv.size());
+
+    for (int j = 0; j < sv.size(); ++j)
+    {
+      ASSERT_EQ(sv[j], dv[j]);
+    }
+
+    auto sv2 = sv;
+    ASSERT_EQ(sv2.size(), sv.size());
+    for (int j = 0; j < sv.size(); ++j)
+    {
+      ASSERT_EQ(sv2[j], dv[j]);
+    }
+  }
+}
+
+TEST(RTreeTest, Flatten)
+{
+  using rtree_type = er::RTree<er::aabb_t<int>, int, int>;
+
+  rtree_type rtree;
+
+  // insert 3000 points
+  for (int i = 0; i < 1; ++i)
+  {
+    rtree.emplace(i, i);
+  }
+
+  auto flatten = rtree.flatten();
+
+  ASSERT_TRUE(flatten.leaf_level == rtree.leaf_level());
+  ASSERT_TRUE(flatten.data.size() == 1);
+
+  std::vector<bool> valid(3000, false);
+  for (int data : flatten.data)
+  {
+    ASSERT_LT(data, 3000);
+    ASSERT_GE(data, 0);
+    ASSERT_FALSE(valid[data]);
+    valid[data] = true;
+  }
+
+  int nodeid = 0;
+  for (auto& node : flatten.nodes)
+  {
+    if (nodeid != 0)
+    {
+      ASSERT_GE(node.size, rtree_type::MIN_ENTRIES);
+      ASSERT_LE(node.size, rtree_type::MAX_ENTRIES);
+    }
+
+    ++nodeid;
   }
 }

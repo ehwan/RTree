@@ -34,6 +34,7 @@ public:
   {
   }
   static_vector(static_vector const& rhs)
+      : size_(0)
   {
     for (size_type i = 0; i < rhs.size(); ++i)
     {
@@ -43,6 +44,7 @@ public:
   // element-wise move construct.
   // Note that rhs.size() is not changed.
   static_vector(static_vector&& rhs)
+      : size_(0)
   {
     for (size_type i = 0; i < rhs.size(); ++i)
     {
