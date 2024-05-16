@@ -1,6 +1,8 @@
 # RTree
 Header-Only N-dimensional RTree implementation on Modern C++
 
+And some features to use in GPU ( CUDA, OpenCL, etc. )
+
 ## References
  Guttman, A. (1984). "R-Trees: A Dynamic Index Structure for Spatial Searching" (PDF). Proceedings of the 1984 ACM SIGMOD international conference on Management of data – SIGMOD '84. p. 47.
 
@@ -296,6 +298,83 @@ int main()
   return 0;
 }
 ```
+
+## For usage in GPU ( CUDA, OpenCL, etc. )
+`RTree::flatten()` function is provided to convert RTree structure to linear array. From this dense array, you can easily load it to GPU memory.
+
+```cpp
+// Example usage of the flatten function
+rtree_type rtree = /* construct and populate your RTree */;
+rtree_type::flatten_result_t flatten = rtree.flatten();
+
+// Now you can load 'flatten' into GPU memory for processing
+```
+
+### flatten_result_t structure
+
+The return type of `RTree::flatten()` is `flatten_result_t`, which contains all the necessary information to query RTree structure.
+```cpp
+struct flatten_result_t
+{
+  // leaf node's level
+  int leaf_level;
+
+  // root node index; must be 0
+  int root;
+
+  // node information ( include leaf nodes )
+  std::vector<flatten_node_t> nodes;
+
+  // global dense buffer of children_boundingbox
+  std::vector<geometry_type> children_bound;
+  // global dense buffer of children index
+  std::vector<size_type> children;
+
+  // inserted data
+  std::vector<mapped_type> data;
+};
+```
+ - `leaf_level`: Indicates the level of the leaf nodes in the tree.
+ - `root`: The index of the root node in the nodes array. This must always be 0.
+ - `nodes`: A vector containing all the nodes of the RTree, including both internal and leaf nodes.
+ - `children_bound`: A global dense buffer holding the bounding boxes of all children nodes.
+ - `children`: A global dense buffer holding the indices of all children nodes.
+ - `data`: A vector containing the actual data stored in the leaf nodes.
+
+
+### flatten_node_t structure
+```cpp
+// node information
+struct flatten_node_t
+{
+  // offset in global dense buffer
+  size_type offset;
+
+  // the number of children
+  size_type size;
+
+  // Can retrieve child node's information by
+  // children_bound[ offset + i ] and children[ offset + i ]
+  // for i in range(0 ... size)
+
+  // for leaf node ( level == leaf_level ),
+  // children[ offset + i ] is the index on array 'data'
+
+  // for normal node ( level < leaf_level ),
+  // children[ offset + i ] is the index on array 'nodes'
+
+  // nodes[0] is the root node
+
+  // parent node index
+  size_type parent;
+};
+```
+ - `offset`: Indicates the starting position in the global dense buffers (children_bound and children) for the children of this node.
+ - `size`: The number of children this node has.
+ - `parent`: The index of the parent node in the nodes array.
+
+ The children of a node can be retrieved using the offset and size values. For leaf nodes (where level == leaf_level), the children array points to indices in the data array. For non-leaf nodes (where level < leaf_level), the children array points to indices in the nodes array.
+
 
 
 ## Visualization Examples
