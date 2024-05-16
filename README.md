@@ -379,6 +379,32 @@ struct flatten_node_t
 
 
 ## Visualization Examples
+
+### R-Tree structure visualization
+
+![](example/node_diagram.png)
+
+This image was created with the assistance of ChatGPT, an AI language model developed by OpenAI.
+
+The image is a diagram that visually represents the structure of an RTree, which is used for efficiently managing and searching spatial data. The diagram uses a Black and White theme and displays the following structure:
+
+ - **root node (Level 0):**
+
+    The topmost node, displayed in black.
+ - **intermediate nodes (Level 1):**
+
+    Child nodes of the root node, shown in dark gray. These nodes have leaf nodes as their children.
+ - **leaf nodes (leaf_level):**
+
+    Nodes containing data nodes, shown in light gray. Each leaf node has actual data items as its children.
+ - **data nodes:**
+
+    Children of the leaf nodes representing the actual data. They are shown in light gray in the Black and White theme.
+bounding box information:
+
+Each edge connecting the nodes includes bounding box information displayed as text. This represents the spatial relationship between nodes.
+
+
 ### 1-dimensional R-Tree structure visualization
 `example/visualize_1d`
 
