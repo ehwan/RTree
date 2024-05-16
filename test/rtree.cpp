@@ -433,10 +433,43 @@ TEST(RTreeTest, StaticVector)
   }
 }
 
+using rtree_type = er::RTree<er::aabb_t<int>, int, int>;
+void search_flatten(rtree_type::flatten_result_t const& flat,
+                    int range_min,
+                    int range_max,
+                    int node,
+                    int level,
+                    std::vector<int>& ret)
+{
+  if (level == flat.leaf_level)
+  {
+    auto& node_info = flat.nodes[node];
+    for (int i = 0; i < node_info.size; ++i)
+    {
+      auto child_bound = flat.children_bound[node_info.offset + i];
+      auto child_index = flat.children[node_info.offset + i];
+      if (range_min <= child_bound.min_ && child_bound.max_ <= range_max)
+      {
+        ret.push_back(flat.data[child_index]);
+      }
+    }
+  }
+  else
+  {
+    auto& node_info = flat.nodes[node];
+    for (int i = 0; i < node_info.size; ++i)
+    {
+      auto child_bound = flat.children_bound[node_info.offset + i];
+      auto child_index = flat.children[node_info.offset + i];
+      if (!(child_bound.max_ < range_min || child_bound.min_ > range_max))
+      {
+        search_flatten(flat, range_min, range_max, child_index, level + 1, ret);
+      }
+    }
+  }
+}
 TEST(RTreeTest, Flatten)
 {
-  using rtree_type = er::RTree<er::aabb_t<int>, int, int>;
-
   rtree_type rtree;
 
   // insert 3000 points
@@ -447,8 +480,9 @@ TEST(RTreeTest, Flatten)
 
   auto flatten = rtree.flatten();
 
-  ASSERT_TRUE(flatten.leaf_level == rtree.leaf_level());
-  ASSERT_TRUE(flatten.data.size() == 3000);
+  ASSERT_EQ(flatten.root, 0);
+  ASSERT_EQ(flatten.leaf_level, rtree.leaf_level());
+  ASSERT_EQ(flatten.data.size(), 3000);
 
   std::vector<bool> valid(3000, false);
   for (int data : flatten.data)
@@ -469,5 +503,27 @@ TEST(RTreeTest, Flatten)
     }
 
     ++nodeid;
+  }
+
+  std::mt19937 mt(std::random_device {}());
+  std::uniform_int_distribution<int> dist(1, 2999);
+
+  for (int i = 0; i < 200; ++i)
+  {
+    int min_ = dist(mt);
+    int max_ = dist(mt);
+    if (min_ > max_)
+    {
+      std::swap(min_, max_);
+    }
+    std::vector<int> search_result;
+    search_flatten(flatten, min_, max_, flatten.root, 0, search_result);
+    ASSERT_EQ(search_result.size(), max_ - min_ + 1);
+
+    std::sort(search_result.begin(), search_result.end());
+    for (int j = min_; j <= max_; ++j)
+    {
+      ASSERT_EQ(search_result[j - min_], j);
+    }
   }
 }
